@@ -1,0 +1,18 @@
+{
+	"node": "n8n-nodes-windowedge-ai",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Sales", "Marketing"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://github.com/WindowEdge-AI/n8n-nodes-windowedge-ai#credentials"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/WindowEdge-AI/n8n-nodes-windowedge-ai#readme"
+			}
+		]
+	}
+}

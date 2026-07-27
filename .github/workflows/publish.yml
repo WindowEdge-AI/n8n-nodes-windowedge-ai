@@ -1,0 +1,58 @@
+# Publish skeleton for npm provenance and n8n verified community-node readiness.
+#
+# n8n requires verified community nodes submitted after May 1, 2026 to be
+# published from GitHub Actions with an npm provenance statement.
+#
+# Preferred setup: npm Trusted Publisher
+# 1. Open the npm package settings for @windowedge/n8n-nodes-windowedge-ai.
+# 2. Add GitHub Actions as a trusted publisher.
+# 3. Use owner WindowEdge-AI, repository n8n-nodes-windowedge-ai, workflow publish.yml.
+# 4. Leave NPM_TOKEN unset.
+#
+# Fallback setup: npm automation token
+# 1. Create a granular npm automation token with publish access for this package.
+# 2. Add it as the GitHub Actions secret NPM_TOKEN.
+#
+# This workflow is intentionally tag-triggered and should not be run until the
+# package has been manually verified and approved for publish.
+
+name: Publish
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify package
+        run: |
+          npm run lint
+          npm test
+
+      - name: Publish with provenance
+        run: |
+          [ -n "$NPM_TOKEN" ] && npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+          npm publish --provenance --access public
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
