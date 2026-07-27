@@ -1,20 +1,6 @@
-# Publish skeleton for npm provenance and n8n verified community-node readiness.
-#
-# n8n requires verified community nodes submitted after May 1, 2026 to be
-# published from GitHub Actions with an npm provenance statement.
-#
-# Preferred setup: npm Trusted Publisher
-# 1. Open the npm package settings for @windowedge/n8n-nodes-windowedge-ai.
-# 2. Add GitHub Actions as a trusted publisher.
-# 3. Use owner WindowEdge-AI, repository n8n-nodes-windowedge-ai, workflow publish.yml.
-# 4. Leave NPM_TOKEN unset.
-#
-# Fallback setup: npm automation token
-# 1. Create a granular npm automation token with publish access for this package.
-# 2. Add it as the GitHub Actions secret NPM_TOKEN.
-#
-# This workflow is intentionally tag-triggered and should not be run until the
-# package has been manually verified and approved for publish.
+# Publishes version tags through GitHub Actions with npm provenance.
+# Configure npm Trusted Publisher for this workflow and leave NPM_TOKEN unset.
+# A package-scoped granular NPM_TOKEN may be used for the first publish.
 
 name: Publish
 
@@ -40,15 +26,25 @@ jobs:
         with:
           node-version: 'lts/*'
           cache: 'npm'
-          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Verify tag matches package version
+        shell: bash
+        run: |
+          package_version="$(node -p "require('./package.json').version")"
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [ "$tag_version" != "$package_version" ]; then
+            echo "Tag version $tag_version does not match package version $package_version."
+            exit 1
+          fi
 
       - name: Verify package
         run: |
           npm run lint
           npm test
+          npm pack --dry-run
 
       - name: Publish with provenance
         run: |

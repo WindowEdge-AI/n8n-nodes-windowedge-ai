@@ -2,18 +2,24 @@ import type {
 	IDataObject,
 	IExecuteFunctions,
 	IHttpRequestOptions,
+	ILoadOptionsFunctions,
 	JsonObject,
 	INodeExecutionData,
+	INodeListSearchResult,
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
 import { NodeApiError, NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 
 import {
+	businessPhoneSearchResults,
 	buildLeadIngestionBody,
 	type LeadIngestionInput,
+	normalizeBaseUrl,
 	parseCustomFields,
 	parseCustomJson,
+	resourceLocatorValue,
+	smsAgentSearchResults,
 } from './GenericFunctions';
 
 function toJsonObject(error: unknown): JsonObject {
@@ -43,6 +49,52 @@ function toJsonObject(error: unknown): JsonObject {
 	return {
 		message: String(error),
 	};
+}
+
+async function getLeadIngestionOptions(this: ILoadOptionsFunctions): Promise<unknown> {
+	const credentials = await this.getCredentials('windowEdgeAiApi');
+	const baseUrl = normalizeBaseUrl(credentials.baseUrl);
+
+	return await this.helpers.httpRequestWithAuthentication.call(this, 'windowEdgeAiApi', {
+		method: 'GET',
+		url: `${baseUrl}/api/v1/lead-ingestion/options`,
+		headers: {
+			Accept: 'application/json',
+		},
+		json: true,
+	});
+}
+
+async function searchBusinessPhones(
+	this: ILoadOptionsFunctions,
+	filter?: string,
+): Promise<INodeListSearchResult> {
+	try {
+		return {
+			results: businessPhoneSearchResults(await getLeadIngestionOptions.call(this), filter),
+		};
+	} catch (error) {
+		throw new NodeApiError(this.getNode(), toJsonObject(error), {
+			message: 'Could not load WindowEdge AI business phones',
+			description: 'Choose By Phone Number to enter a business phone manually',
+		});
+	}
+}
+
+async function searchSmsAgents(
+	this: ILoadOptionsFunctions,
+	filter?: string,
+): Promise<INodeListSearchResult> {
+	try {
+		return {
+			results: smsAgentSearchResults(await getLeadIngestionOptions.call(this), filter),
+		};
+	} catch (error) {
+		throw new NodeApiError(this.getNode(), toJsonObject(error), {
+			message: 'Could not load WindowEdge AI SMS agents',
+			description: 'Choose By ID to enter an SMS agent ID manually',
+		});
+	}
 }
 
 export class WindowEdgeAi implements INodeType {
@@ -98,9 +150,10 @@ export class WindowEdgeAi implements INodeType {
 				},
 				options: [
 					{
-						name: 'Create Lead',
+						name: 'Create',
 						value: 'createLead',
-						action: 'Create a lead',
+						action: 'Create lead',
+						description: 'Send a new lead to WindowEdge AI',
 					},
 				],
 				default: 'createLead',
@@ -111,7 +164,7 @@ export class WindowEdgeAi implements INodeType {
 				type: 'string',
 				required: true,
 				default: '',
-				placeholder: '+15551234567',
+				placeholder: 'e.g. +15551234567',
 				description: 'Lead phone number in E.164 format when possible',
 				displayOptions: {
 					show: {
@@ -125,6 +178,7 @@ export class WindowEdgeAi implements INodeType {
 				name: 'first_name',
 				type: 'string',
 				default: '',
+				placeholder: 'e.g. Ava',
 				displayOptions: {
 					show: {
 						resource: ['lead'],
@@ -137,6 +191,7 @@ export class WindowEdgeAi implements INodeType {
 				name: 'last_name',
 				type: 'string',
 				default: '',
+				placeholder: 'e.g. Johnson',
 				displayOptions: {
 					show: {
 						resource: ['lead'],
@@ -148,7 +203,7 @@ export class WindowEdgeAi implements INodeType {
 				displayName: 'Email',
 				name: 'email',
 				type: 'string',
-				placeholder: 'lead@example.com',
+				placeholder: 'e.g. lead@example.com',
 				default: '',
 				displayOptions: {
 					show: {
@@ -189,6 +244,7 @@ export class WindowEdgeAi implements INodeType {
 				},
 				required: true,
 				default: '',
+				placeholder: 'e.g. Thanks for requesting a quote. We will follow up shortly.',
 				description: 'Static message to send when Message Mode is Static',
 				displayOptions: {
 					show: {
@@ -216,6 +272,7 @@ export class WindowEdgeAi implements INodeType {
 						name: 'address',
 						type: 'string',
 						default: '',
+						placeholder: 'e.g. 123 Main St',
 						description: 'Lead street address',
 					},
 					{
@@ -223,18 +280,21 @@ export class WindowEdgeAi implements INodeType {
 						name: 'city',
 						type: 'string',
 						default: '',
+						placeholder: 'e.g. Denver',
 					},
 					{
 						displayName: 'State',
 						name: 'state',
 						type: 'string',
 						default: '',
+						placeholder: 'e.g. CO',
 					},
 					{
 						displayName: 'ZIP / Postal Code',
 						name: 'zip',
 						type: 'string',
 						default: '',
+						placeholder: 'e.g. 80202',
 					},
 				],
 			},
@@ -255,7 +315,7 @@ export class WindowEdgeAi implements INodeType {
 						displayName: 'SMS Opt-In',
 						name: 'smsOptIn',
 						type: 'boolean',
-						default: true,
+						default: false,
 						description: 'Whether the lead explicitly opted in to SMS outreach',
 					},
 					{
@@ -285,13 +345,14 @@ export class WindowEdgeAi implements INodeType {
 						name: 'attributionCampaign',
 						type: 'string',
 						default: '',
+						placeholder: 'e.g. springWindows',
 					},
 					{
 						displayName: 'Channel',
 						name: 'channel',
 						type: 'string',
 						default: '',
-						placeholder: 'google, facebook, website, referral',
+						placeholder: 'e.g. google',
 					},
 					{
 						displayName: 'External CMS ID',
@@ -310,7 +371,7 @@ export class WindowEdgeAi implements INodeType {
 						name: 'urlParameters',
 						type: 'string',
 						default: '',
-						placeholder: 'utm_source=google&utm_campaign=spring-windows',
+						placeholder: 'e.g. utm_source=google&utm_campaign=springWindows',
 					},
 				],
 			},
@@ -340,12 +401,14 @@ export class WindowEdgeAi implements INodeType {
 								name: 'key',
 								type: 'string',
 								default: '',
+								placeholder: 'e.g. projectType',
 							},
 							{
 								displayName: 'Value',
 								name: 'value',
 								type: 'string',
 								default: '',
+								placeholder: 'e.g. windows',
 							},
 						],
 					},
@@ -365,18 +428,54 @@ export class WindowEdgeAi implements INodeType {
 				},
 				options: [
 					{
-						displayName: 'Agent ID',
+						displayName: 'SMS Agent',
 						name: 'agentId',
-						type: 'string',
-						default: '',
-						description: 'Specific WindowEdge AI SMS agent UUID to route this lead to',
+						type: 'resourceLocator',
+						default: { mode: 'list', value: '' },
+						description: 'SMS agent to route this lead to',
+						modes: [
+							{
+								displayName: 'From List',
+								name: 'list',
+								type: 'list',
+								placeholder: 'Select an SMS agent',
+								typeOptions: {
+									searchListMethod: 'searchSmsAgents',
+									searchable: true,
+								},
+							},
+							{
+								displayName: 'By ID',
+								name: 'id',
+								type: 'string',
+								placeholder: 'e.g. 550e8400-e29b-41d4-a716-446655440000',
+							},
+						],
 					},
 					{
 						displayName: 'Business Phone',
 						name: 'from',
-						type: 'string',
-						default: '',
+						type: 'resourceLocator',
+						default: { mode: 'list', value: '' },
 						description: 'Tenant business phone number to send from',
+						modes: [
+							{
+								displayName: 'From List',
+								name: 'list',
+								type: 'list',
+								placeholder: 'Select a business phone',
+								typeOptions: {
+									searchListMethod: 'searchBusinessPhones',
+									searchable: true,
+								},
+							},
+							{
+								displayName: 'By Phone Number',
+								name: 'phoneNumber',
+								type: 'string',
+								placeholder: 'e.g. +15557654321',
+							},
+						],
 					},
 					{
 						displayName: 'Custom JSON',
@@ -397,11 +496,18 @@ export class WindowEdgeAi implements INodeType {
 		],
 	};
 
+	methods = {
+		listSearch: {
+			searchBusinessPhones,
+			searchSmsAgents,
+		},
+	};
+
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
 		const credentials = await this.getCredentials('windowEdgeAiApi');
-		const baseUrl = String(credentials.baseUrl ?? 'https://api.windowedge.ai').replace(/\/+$/, '');
+		const baseUrl = normalizeBaseUrl(credentials.baseUrl);
 
 		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
 			try {
@@ -449,8 +555,8 @@ export class WindowEdgeAi implements INodeType {
 					attributionCampaign: attribution.attributionCampaign as string | undefined,
 					urlParameters: attribution.urlParameters as string | undefined,
 					externalCmsId: attribution.externalCmsId as string | undefined,
-					from: advanced.from as string | undefined,
-					agentId: advanced.agentId as string | undefined,
+					from: resourceLocatorValue(advanced.from),
+					agentId: resourceLocatorValue(advanced.agentId),
 					custom,
 					customFields,
 					test: advanced.testLead as boolean | undefined,

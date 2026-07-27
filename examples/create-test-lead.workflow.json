@@ -1,0 +1,64 @@
+{
+  "name": "WindowEdge AI - Create Test Lead",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "e96a9134-3e5a-4f99-bb4a-00a1cd1798e3",
+      "name": "When clicking Execute Workflow",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "createLead",
+        "phone": "+15551234567",
+        "first_name": "Ava",
+        "last_name": "Johnson",
+        "email": "ava@example.com",
+        "messageMode": "ai_generated",
+        "sms": {
+          "smsOptIn": false
+        },
+        "attribution": {
+          "channel": "n8n",
+          "attributionCampaign": "connectorTest"
+        },
+        "advanced": {
+          "testLead": true
+        }
+      },
+      "id": "6f91bc2e-e48b-4c4f-b107-28843132891c",
+      "name": "Create WindowEdge Test Lead",
+      "type": "@windowedge/n8n-nodes-windowedge-ai.windowEdgeAi",
+      "typeVersion": 1,
+      "position": [
+        260,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "When clicking Execute Workflow": {
+      "main": [
+        [
+          {
+            "node": "Create WindowEdge Test Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "versionId": "620f31a7-f594-4360-890b-f8bf13d2b8ae"
+}
