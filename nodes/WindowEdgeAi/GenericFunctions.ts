@@ -35,8 +35,112 @@ export interface LeadIngestionInput {
 	test?: boolean;
 }
 
+export interface ListSearchItem {
+	name: string;
+	value: string;
+}
+
 function isPlainObject(value: unknown): value is IDataObject {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function matchesFilter(values: Array<string | undefined>, filter?: string): boolean {
+	const normalizedFilter = filter?.trim().toLowerCase();
+
+	if (!normalizedFilter) {
+		return true;
+	}
+
+	return values.some((value) => value?.toLowerCase().includes(normalizedFilter));
+}
+
+export function normalizeBaseUrl(value: unknown): string {
+	const baseUrl = typeof value === 'string' ? value.trim() : '';
+	return (baseUrl || 'https://api.windowedge.ai').replace(/\/+$/, '');
+}
+
+export function resourceLocatorValue(value: unknown): string | undefined {
+	if (typeof value === 'string') {
+		const normalized = value.trim();
+		return normalized === '' ? undefined : normalized;
+	}
+
+	if (!isPlainObject(value) || typeof value.value !== 'string') {
+		return undefined;
+	}
+
+	const normalized = value.value.trim();
+	return normalized === '' ? undefined : normalized;
+}
+
+export function businessPhoneSearchResults(
+	response: unknown,
+	filter?: string,
+): ListSearchItem[] {
+	if (!isPlainObject(response) || !Array.isArray(response.business_phones)) {
+		return [];
+	}
+
+	const seen = new Set<string>();
+	const results: ListSearchItem[] = [];
+
+	for (const rawPhone of response.business_phones) {
+		if (!isPlainObject(rawPhone) || typeof rawPhone.phone_number !== 'string') {
+			continue;
+		}
+
+		const phoneNumber = rawPhone.phone_number.trim();
+		const label = typeof rawPhone.label === 'string' ? rawPhone.label.trim() : '';
+		const id = typeof rawPhone.id === 'string' ? rawPhone.id.trim() : '';
+
+		if (
+			phoneNumber === '' ||
+			seen.has(phoneNumber) ||
+			!matchesFilter([phoneNumber, label, id], filter)
+		) {
+			continue;
+		}
+
+		seen.add(phoneNumber);
+		results.push({
+			name: `${label ? `${label} (${phoneNumber})` : phoneNumber}${
+				rawPhone.is_default === true ? ' - Default' : ''
+			}`,
+			value: phoneNumber,
+		});
+	}
+
+	return results;
+}
+
+export function smsAgentSearchResults(response: unknown, filter?: string): ListSearchItem[] {
+	if (!isPlainObject(response) || !Array.isArray(response.sms_agents)) {
+		return [];
+	}
+
+	const seen = new Set<string>();
+	const results: ListSearchItem[] = [];
+
+	for (const rawAgent of response.sms_agents) {
+		if (!isPlainObject(rawAgent) || typeof rawAgent.id !== 'string') {
+			continue;
+		}
+
+		const id = rawAgent.id.trim();
+		const label = typeof rawAgent.label === 'string' ? rawAgent.label.trim() : '';
+
+		if (id === '' || seen.has(id) || !matchesFilter([id, label], filter)) {
+			continue;
+		}
+
+		seen.add(id);
+		results.push({
+			name: label || id,
+			value: id,
+		});
+	}
+
+	return results;
 }
 
 export function pruneEmpty(value: unknown): unknown {

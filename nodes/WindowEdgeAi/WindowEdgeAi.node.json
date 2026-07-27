@@ -6,12 +6,12 @@
 	"resources": {
 		"credentialDocumentation": [
 			{
-				"url": "https://github.com/WindowEdge-AI/n8n-nodes-windowedge-ai#credentials"
+				"url": "https://docs.windowedge.ai/docs/form-submissions/overview"
 			}
 		],
 		"primaryDocumentation": [
 			{
-				"url": "https://github.com/WindowEdge-AI/n8n-nodes-windowedge-ai#readme"
+				"url": "https://docs.windowedge.ai/docs/marketing-setup/tracking-and-capture"
 			}
 		]
 	}

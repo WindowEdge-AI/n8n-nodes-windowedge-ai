@@ -16,7 +16,7 @@ export class WindowEdgeAiApi implements ICredentialType {
 		dark: 'file:../nodes/WindowEdgeAi/windowedgeai.dark.svg',
 	};
 
-	documentationUrl = 'https://github.com/WindowEdge-AI/n8n-nodes-windowedge-ai#credentials';
+	documentationUrl = 'https://docs.windowedge.ai/docs/form-submissions/overview';
 
 	properties: INodeProperties[] = [
 		{
