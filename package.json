@@ -1,6 +1,6 @@
 {
 	"name": "@windowedge/n8n-nodes-windowedge-ai",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "n8n community node for WindowEdge AI lead ingestion",
 	"license": "MIT",
 	"homepage": "https://github.com/WindowEdge-AI/n8n-nodes-windowedge-ai#readme",

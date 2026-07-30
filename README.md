@@ -138,6 +138,7 @@ granular `NPM_TOKEN` for the first publish.
 
 ## Version history
 
+- **0.1.1**: Provenance-backed GitHub Actions release for n8n Creator Portal verification.
 - **0.1.0**: Initial lead-ingestion node with credential testing, tenant routing choices,
   manual routing fallback, test mode, and explicit SMS consent handling.
 
